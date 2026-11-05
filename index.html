@@ -382,8 +382,9 @@ function renderAdmin(){
     <div class="panel"><h3>Event control</h3><div class="row" style="margin-top:10px">
       <button class="pri" data-act="start" ${status==='running'||!teams.length?'disabled':''}>${status==='stopped'?'Resume':'Open the event'}</button>
       <button data-act="stop" ${status==='running'?'':'disabled'}>Lock (pause everyone)</button>
-      <button class="dng" data-act="resetrace">Reset all progress</button></div>
-      <div class="small" style="margin-top:6px">Open = teams can press their buttons. Each team times itself: only the time between Start and End counts. Lock freezes running timers; Resume gives that time back. Reset wipes all progress, keeps teams.</div></div>
+      <button class="dng" data-act="resetrace">Reset all progress</button>
+      <button class="dng" data-act="wipeall">Wipe teams &amp; progress</button></div>
+      <div class="small" style="margin-top:6px">Open = teams can press their buttons. Each team times itself: only the time between Start and End counts. Lock freezes running timers; Resume gives that time back. Reset wipes progress and keeps teams. Wipe teams &amp; progress removes the teams as well (new links are generated when you save teams again).</div></div>
     <div class="panel"><h3>Teams</h3>
       <div class="row" style="margin:10px 0">Number of teams
         <select id="nt">${[2,3,4,5].map(k=>`<option ${k===n?'selected':''}>${k}</option>`).join('')}</select>
@@ -435,6 +436,11 @@ app.addEventListener('click',e=>{
     const {tid,idx,field}=toast; const lf=latestField(tid);
     if(lf&&lf.idx===idx&&lf.field===field) DB.remove(`seg/${tid}/${idx}/${field}`);
     toast=null; clearTimeout(toastTimer); render();
+  }
+  else if(a==='wipeall'){
+    if(confirm('Delete ALL teams and ALL progress? The team links stop working. Your organiser link stays the same.')){
+      DB.remove('seg'); DB.remove('teams'); DB.remove('stoppedAt'); DB.set('status','setup');
+    }
   }
   else if(a==='demoreset'){ if(confirm('Wipe ALL demo data (teams, progress, organiser key)?')){ DB.reset(); location.search='?view=admin'; } }
   else if(a==='create'){ const k=rnd()+rnd(); DB.set('adminKey',k).then(()=>{ location.search='?view=admin&key='+k; }); }
