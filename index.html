@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fractal Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Exo+2:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0f14; --panel:#141922; --line:#262e3b; --txt:#e6e2d6; --dim:#8b92a0;
+  --gold:#c9a84c; --blue:#17607f; --blue-d:#062b3a; --orange:#e8732f; --red:#c0504a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:'Exo 2',system-ui,sans-serif;min-height:100vh}
+h1,h2,h3{font-family:'Cinzel',serif;margin:0;letter-spacing:.04em}
+#app{max-width:1280px;margin:0 auto;padding:16px}
+.banner{background:#3a2a10;border:1px solid var(--gold);color:var(--gold);padding:8px 12px;border-radius:6px;font-size:13px;margin-bottom:12px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.top h1{font-size:26px;color:var(--gold)}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid var(--line);font-size:12px;color:var(--dim)}
+.pill.run{border-color:#3d8f4f;color:#6fd488}
+.pill.stop{border-color:var(--red);color:var(--red)}
+.timer{font-family:'Cinzel',serif;font-variant-numeric:tabular-nums;color:var(--gold)}
+.big{font-size:42px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+button{font:inherit;cursor:pointer;background:#1d2531;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:7px 13px}
+button:hover{border-color:var(--gold)}
+button.pri{background:var(--gold);color:#16120a;border-color:var(--gold);font-weight:700}
+button.dng{border-color:var(--red);color:var(--red)}
+button:disabled{opacity:.4;cursor:default}
+input,select{font:inherit;background:#0e1219;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.small{font-size:12px;color:var(--dim)}
+/* tile grid */
+.grid{display:flex;flex-direction:column;gap:10px;align-items:center;margin:10px 0 20px}
+.grow{display:flex;gap:10px;justify-content:center;width:100%}
+.tile{flex:0 0 calc((100% - 80px)/9);aspect-ratio:1/1;max-width:150px;background:var(--blue);border:2px solid var(--blue-d);border-radius:4px;padding:6px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;color:#fff;position:relative;overflow:hidden}
+.tile .n{font-size:11px;opacity:.7;font-weight:700}
+.tile .nm{font-weight:700;font-size:clamp(10px,1.15vw,15px);line-height:1.1}
+.tile .ch{font-size:clamp(9px,.9vw,12px);line-height:1.15;opacity:.9}
+.tile .tm{font-family:'Cinzel',serif;font-size:clamp(10px,1vw,13px);font-variant-numeric:tabular-nums}
+.tile.done{border-color:#c4651f}
+.tile img.ic{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.tile .ov{position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,0) 35%,rgba(0,0,0,.88));z-index:1}
+.tile.done .ov{background:linear-gradient(rgba(232,115,47,.28),rgba(0,0,0,.88))}
+
+.tile .n,.tile .bot{position:relative;z-index:2;text-shadow:0 1px 3px #000}
+.em{color:var(--gold)}
+.nowline{display:flex;gap:12px;align-items:center;margin:2px 0 10px}
+.nowline img{width:56px;height:56px;border:2px solid var(--line);border-radius:5px;flex:none}
+.nowline .c{font-size:17px}
+.nowline .c.wait{color:var(--dim)}
+img.mini{width:22px;height:22px;vertical-align:middle;margin-right:6px;border-radius:3px}
+.stagerow{display:flex;gap:24px;align-items:center;justify-content:center;text-align:left;flex-wrap:wrap}
+.stagerow img.bigic{width:128px;height:128px;border:2px solid var(--line);border-radius:6px;flex:none}
+.stagerow img.bigic.btn{cursor:pointer;border-color:var(--gold)}
+.stagerow .txt{flex:1;min-width:240px;max-width:640px}
+.stage .fname{margin:2px 0 6px}
+.stage .chal{margin:6px 0 14px}
+.tile.future{opacity:.45}
+.tile.cur{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(201,168,76,.55);cursor:pointer;opacity:1}
+.tile.cur:hover{filter:brightness(1.15)}
+.tile.cur.locked{cursor:default;box-shadow:0 0 0 2px var(--gold)}
+
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:18px;text-align:center}
+.stage .fno{font-family:'Cinzel',serif;color:var(--dim);letter-spacing:.2em;font-size:13px}
+.stage .fname{font-family:'Cinzel',serif;font-size:clamp(26px,5vw,44px);color:var(--gold);margin:4px 0 10px}
+.stage .chal{font-size:clamp(18px,2.6vw,28px);margin:10px auto 16px;max-width:800px}
+.stage .hidden{color:var(--dim);letter-spacing:.3em}
+.stage .segt{font-size:clamp(40px,8vw,72px);margin:8px 0 14px}
+.bigbtn{font-family:'Cinzel',serif;font-weight:700;letter-spacing:.08em;font-size:clamp(16px,2.4vw,24px);padding:16px 34px;border-radius:8px;border:2px solid var(--gold);background:var(--gold);color:#17130a;cursor:pointer}
+.bigbtn:hover{filter:brightness(1.1)}
+.bigbtn.end{background:var(--orange);border-color:var(--orange);color:#fff}
+.linkbtn{display:inline-block;margin:0 0 14px;padding:9px 16px;border:1px solid var(--gold);border-radius:6px;color:var(--gold);text-decoration:none}
+.linkbtn:hover{background:rgba(201,168,76,.12)}
+@media(max-width:760px){
+  .grow{flex-wrap:wrap}
+  .tile{flex:0 0 calc((100% - 30px)/4);max-width:none}
+  .tile .nm{font-size:13px}.tile .ch{font-size:11px}
+}
+/* strips */
+.team{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--panel)}
+.thead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.tname{font-family:'Cinzel',serif;font-size:20px}
+.rank{color:var(--gold);margin-right:8px}
+.strip{display:flex;border:2px solid var(--blue-d);border-radius:3px;overflow:hidden}
+.seg{flex:1;background:var(--blue);color:#fff;text-align:center;padding:12px 0;font-size:20px;border-right:2px solid var(--blue-d)}
+.seg:last-child{border-right:0}
+.seg.done{background:var(--orange)}
+.seg.cur{outline:3px solid var(--gold);outline-offset:-3px}
+.strip.thin .seg{padding:10px 0;font-size:0;border-right:1px solid var(--blue-d)}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--dim);font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:6px}
+td,th{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1d2531;border:1px solid var(--gold);padding:10px 16px;border-radius:8px;display:flex;gap:14px;align-items:center;z-index:9}
+.err{color:var(--red)}
+.linkrow{display:flex;gap:8px;align-items:center;margin:4px 0}
+.linkrow input{flex:1;min-width:0;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+<script>
+/* ============================================================
+   CONFIG
+   Paste your Firebase web-app config here (see setup checklist).
+   Leave as null to run in DEMO mode (data stays in this browser).
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDDurWcwj8bQphQ_vd09jihbXNMEMiLVPA",
+  authDomain: "mystery-box-3---fractallized.firebaseapp.com",
+  databaseURL: "https://mystery-box-3---fractallized-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "mystery-box-3---fractallized",
+  storageBucket: "mystery-box-3---fractallized.firebasestorage.app",
+  messagingSenderId: "445472491630",
+  appId: "1:445472491630:web:9ea943b7c4430d4c1e3e7f"
+};
+/* e.g.
+const FIREBASE_CONFIG = {
+  apiKey: "...", authDomain: "...", databaseURL: "https://YOURPROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "...", appId: "..."
+};
+*/
+
+const EVENT_TITLE = 'Fractal Rush';
+const UNDO_WINDOW_MS = 5000;
+
+// Official in-game order 1–25: [fractal, challenge]
+const FRACTALS = [
+  ['Volcanic','Ignore the grawl shamans'],
+  ['Uncategorised','Kill all harpies'],
+  ['Snowblind','Clear it on CM'],
+  ['Urban Battleground','Do the skip'],
+  ['Swampland',"Visit Mossman's Hut"],
+  ['Cliffside','Pay your respects'],
+  ['Aquatic Ruins','Everyone plays the same class. If you can\'t, you sit back'],
+  ['Underground Facility','The person doing the kegs turns off their screen; another person guides them on voice'],
+  ['Molten Furnace','If a player gets hit by flames, they have to gg'],
+  ['Molten Boss','No skips'],
+  ['Deepstone','Split between the rooms'],
+  ["Siren's Reef",'Only one person can carry gold'],
+  ['Chaos','Reprieve - no challenge!'],
+  ['Aetherblade','Everyone puts on Caramelldansen and clears the boss within the song\'s length','https://www.youtube.com/watch?v=PDJLvF1dUek'],
+  ['Thaumanova Reactor','Pass it on, old-style'],
+  ['Twilight Oasis','Hunt a bounty in Elona instead'],
+  ['Kinfall','Do it like a du- bear'],
+  ['Mai Trin','One person needs to stand still'],
+  ['Solitary Throne','One person jumps, the rest use portals'],
+  ['Solid Ocean','One tentacle needs to always stay alive'],
+  ['Silent Surf','*DO NOT* kill the phantoms'],
+  ['Nightmare','Kill Fleshgorge'],
+  ['Shattered Observatory','Ignore the Corporeal Reassignment until 3 people are alive'],
+  ['Sunqua Peak','Reprieve - no challenge!'],
+  ['Lonely Tower','Kite Deimos']
+];
+const N = FRACTALS.length;
+const ic = n => 'icons/'+String(n).padStart(2,'0')+'.png';   // 00 = hidden/reveal, 01-25 = fractals in order
+const chal = t => esc(t).replace(/\*(.+?)\*/g,'<b class="em">$1</b>');
+const TEAM_COLORS = ['#e8732f','#3aa0d8','#7bc96f','#c9a84c','#b46bd6'];
+const ROMAN = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV'];
+
+/* ---------------- storage adapters ---------------- */
+function setPath(obj, path, val){
+  const parts = path.split('/'); let o = obj;
+  for(let i=0;i<parts.length-1;i++){ if(typeof o[parts[i]]!=='object'||o[parts[i]]===null) o[parts[i]]={}; o=o[parts[i]]; }
+  const last = parts[parts.length-1];
+  if(val===null) delete o[last]; else o[last]=val;
+}
+function makeDemo(){
+  const KEY='fractal-rush-demo'; const ls=[];
+  const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}};
+  const save=s=>{try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}};
+  const emit=()=>ls.forEach(f=>f(load()));
+  window.addEventListener('storage',e=>{ if(e.key===KEY) emit(); });
+  return {
+    demo:true, now:()=>Date.now(),
+    onState(f){ ls.push(f); f(load()); },
+    set(p,v){ const s=load(); setPath(s,p,v); save(s); emit(); return Promise.resolve(); },
+    remove(p){ const s=load(); setPath(s,p,null); save(s); emit(); return Promise.resolve(); },
+    reset(){ save({}); emit(); }
+  };
+}
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function makeFirebase(cfg){
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+  firebase.initializeApp(cfg);
+  const db=firebase.database(); const root=db.ref('event'); let offset=0;
+  db.ref('.info/serverTimeOffset').on('value',s=>{offset=s.val()||0;});
+  return {
+    demo:false, now:()=>Date.now()+offset,
+    onState(f){ root.on('value',s=>f(s.val()||{})); },
+    set(p,v){ return root.child(p).set(v); },
+    remove(p){ return root.child(p).remove(); },
+    reset(){ return root.remove(); }
+  };
+}
+
+/* ---------------- helpers ---------------- */
+let DB, S = {};
+const P = new URLSearchParams(location.search);
+const VIEW = P.get('view') || 'spectator';
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const base = () => location.origin + location.pathname;
+const rnd = () => Math.random().toString(36).slice(2,8);
+function fmt(ms){
+  if(ms==null||isNaN(ms)) return '–:––:––';
+  ms=Math.max(0,ms); const t=Math.floor(ms/1000);
+  const h=Math.floor(t/3600), m=Math.floor(t%3600/60), s=t%60;
+  return h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function segsOf(tid){
+  const out=[];
+  for(let i=0;i<N;i++){
+    const g=(S.seg&&S.seg[tid]&&S.seg[tid][i])||null;
+    if(!g||(g.r==null&&g.s==null&&g.e==null)) break;
+    out.push({r:g.r,s:g.s,e:g.e});
+  }
+  return out;
+}
+function doneOf(tid){ const sg=segsOf(tid); let d=0; while(d<sg.length&&sg[d].e!=null) d++; return d; }
+function curSeg(tid){ const sg=segsOf(tid); const d=doneOf(tid); return sg[d]||{}; }
+function phaseOf(tid){ const d=doneOf(tid); if(d>=N) return 'finished'; const c=curSeg(tid); return c.s!=null?'running':c.r!=null?'revealed':'hidden'; }
+function latestField(tid){
+  const sg=segsOf(tid); if(!sg.length) return null;
+  const idx=sg.length-1, g=sg[idx];
+  return {idx, field:g.e!=null?'e':g.s!=null?'s':'r'};
+}
+function teamList(){
+  const t=S.teams||{};
+  return Object.keys(t).sort().map(id=>({id,name:t[id].name,key:t[id].key,color:TEAM_COLORS[parseInt(id.slice(1),10)-1]||'#999'}));
+}
+function endRef(){ return S.status==='stopped' && S.stoppedAt ? S.stoppedAt : DB.now(); }
+function durations(tid){ return segsOf(tid).filter(g=>g.e!=null).map(g=>g.e-g.s); }
+function totalFor(tid){
+  let t=durations(tid).reduce((a,b)=>a+b,0);
+  const c=curSeg(tid); if(c.s!=null&&c.e==null) t+=Math.max(0,endRef()-c.s);
+  return t;
+}
+function splitFor(tid){
+  const c=curSeg(tid);
+  if(doneOf(tid)>=N) return null;
+  return c.s!=null&&c.e==null ? Math.max(0,endRef()-c.s) : 0;
+}
+function ranking(){
+  return teamList().map(t=>({...t,done:doneOf(t.id),d:durations(t.id)}))
+    .sort((a,b)=> b.done-a.done || totalFor(a.id)-totalFor(b.id));
+}
+function statusPill(){
+  const st=S.status||'setup';
+  return st==='running'?'<span class="pill run">● OPEN</span>':st==='stopped'?'<span class="pill stop">■ LOCKED</span>':'<span class="pill">Not open yet</span>';
+}
+
+/* ---------------- rendering ---------------- */
+const app=document.getElementById('app');
+let toast=null, toastTimer=null, stripMode='window';
+
+function banner(){ return DB.demo?'<div class="banner">DEMO MODE – no Firebase config set. Data lives only in this browser (tabs of this browser stay in sync, other devices do not).</div>':''; }
+
+function tileGrid(tid){
+  const done=doneOf(tid), d=durations(tid), ph=phaseOf(tid);
+  const rows=[[0,8],[8,16],[16,25]];
+  return '<div class="grid">'+rows.map(([a,b])=>'<div class="grow">'+
+    FRACTALS.slice(a,b).map((f,k)=>{
+      const i=a+k; const isDone=i<done; const isCur=i===done;
+      const cls='tile'+(isDone?' done':isCur?' cur locked':' future');
+      const src=isDone||(isCur&&ph!=='hidden')?ic(i+1):isCur?ic(0):'';
+      return `<div class="${cls}" ${isDone?`title="${esc(f[1].replace(/\*/g,''))}"`:''}>
+        ${src?`<img class="ic" src="${src}" alt="" onerror="this.style.display='none'">`:''}<div class="ov"></div>
+        <div class="n">${i+1}</div>
+        <div class="bot"><div class="nm">${esc(f[0])}</div><div class="tm">${isDone?fmt(d[i]):''}</div></div></div>`;
+    }).join('')+'</div>').join('')+'</div>';
+}
+
+function strip(r){
+  const done=r.done;
+  if(stripMode==='full'){
+    let h='<div class="strip thin">';
+    for(let i=0;i<N;i++) h+=`<div class="seg ${i<done?'done':i===done?'cur':''}">${i+1}</div>`;
+    return h+'</div>';
+  }
+  const start=Math.max(0,Math.min(done-1,N-5));
+  let h='<div class="strip">';
+  for(let i=start;i<start+5;i++) h+=`<div class="seg ${i<done?'done':i===done?'cur':''}" title="${esc(FRACTALS[i][0])}">${ROMAN[i+1]}</div>`;
+  return h+'</div>';
+}
+
+const PHASE_LABEL={hidden:'waiting to reveal',revealed:'challenge revealed',running:'IN THE FRACTAL',finished:''};
+function teamCards(admin){
+  const rk=ranking();
+  if(!rk.length) return '<div class="panel small">No teams yet.</div>';
+  return rk.map((r,i)=>{
+    const next=r.done<N?FRACTALS[r.done]:null;
+    const lastSplit=r.done?fmt(r.d[r.done-1]):'–';
+    let cum=0;
+    return `<div class="team" style="border-left:5px solid ${r.color}">
+      <div class="thead">
+        <div><span class="rank">#${i+1}</span><span class="tname">${esc(r.name)}</span>
+          <span class="small"> &nbsp;${r.done}/${N} cleared</span></div>
+        <div class="row"><span class="small">now:</span><b>${next?esc(next[0]):'FINISHED'}</b>
+          <span class="small">${next?PHASE_LABEL[phaseOf(r.id)]+' · ':''}last split ${lastSplit}</span>
+          <span class="timer" style="font-size:24px" data-t="total:${r.id}">${fmt(totalFor(r.id))}</span>
+          ${admin?`<button data-act="undo" data-tid="${r.id}" ${latestField(r.id)?'':'disabled'}>Undo last step</button>`:''}</div>
+      </div>
+      ${next?(()=>{const ph=phaseOf(r.id);const vis=ph!=='hidden';return `<div class="nowline"><img src="${vis?ic(r.done+1):ic(0)}" alt="" onerror="this.style.display='none'">
+        <div><b>${esc(next[0])}</b>${vis?`<div class="c">${chal(next[1])}</div>`:`<div class="c wait">instability not revealed yet</div>`}</div></div>`;})():''}
+      ${strip(r)}
+      <details><summary>Splits</summary><table>
+        ${r.d.map((dur,k)=>{cum+=dur;return `<tr><td>${k+1}</td><td><img class="mini" src="${ic(k+1)}" alt="" onerror="this.style.display='none'">${esc(FRACTALS[k][0])}</td><td>${chal(FRACTALS[k][1])}</td><td class="r">${fmt(dur)}</td><td class="r">${fmt(cum)}</td></tr>`;}).join('')||'<tr><td class="small">Nothing cleared yet</td></tr>'}
+      </table></details></div>`;
+  }).join('');
+}
+
+function modeToggle(){
+  return `<div class="row"><span class="small">Bars:</span>
+    <button data-act="mode" data-m="window" ${stripMode==='window'?'class="pri"':''}>Next 5</button>
+    <button data-act="mode" data-m="full" ${stripMode==='full'?'class="pri"':''}>All 25</button></div>`;
+}
+
+function renderSpectator(){
+  if(!P.get('view')&&!S.adminKey&&!teamList().length){
+    app.innerHTML=banner()+`<div class="top"><h1>${EVENT_TITLE}</h1></div><div class="panel">
+      <p>No event exists yet.</p>
+      <p style="margin:10px 0"><a class="linkbtn" href="?view=admin">Open the organiser page to create one</a></p>
+      <p class="small">Teams and spectators use the links the organiser page generates.</p></div>`;
+    return;
+  }
+  app.innerHTML=banner()+`<div class="top"><h1>${EVENT_TITLE}</h1><div class="row">${statusPill()}${modeToggle()}</div></div>`+teamCards(false);
+}
+
+function renderTeam(){
+  const tid=P.get('team'), key=P.get('key');
+  const t=(S.teams||{})[tid];
+  if(!t||t.key!==key){ app.innerHTML=banner()+'<div class="panel err">Invalid team link. Ask the organiser for your link.</div>'; return; }
+  const done=doneOf(tid), ph=phaseOf(tid), open=S.status==='running';
+  let stage='';
+  if(ph==='finished'){
+    stage='<div class="stage"><h2 style="color:var(--gold)">All 25 cleared. Go touch grass.</h2></div>';
+  } else {
+    const f=FRACTALS[done];
+    const hid=ph==='hidden';
+    let txt=`<div class="fno">FRACTAL ${done+1} OF ${N}</div><div class="fname">${esc(f[0])}</div>`;
+    if(hid) txt+=`<div class="chal hidden">? ? ?</div>
+      <button class="bigbtn" data-act="reveal" ${open?'':'disabled'}>Reveal the instability</button>`;
+    else {
+      txt+=`<div class="chal">${chal(f[1])}</div>`;
+      if(f[2]) txt+=`<a class="linkbtn" href="${esc(f[2])}" target="_blank" rel="noopener">▶ Open the song</a><br>`;
+      if(ph==='revealed') txt+=`<button class="bigbtn" data-act="startf" ${open?'':'disabled'}>Start the fractal</button>`;
+      else txt+=`<div class="timer segt" data-t="split:${tid}">${fmt(splitFor(tid))}</div>
+        <button class="bigbtn end" data-act="endf" ${open?'':'disabled'}>End the fractal</button>`;
+    }
+    if(!open) txt+='<div class="small" style="margin-top:12px">'+(S.status==='stopped'?'The organiser has locked the event.':'Waiting for the organiser to open the event.')+'</div>';
+    stage=`<div class="stage"><div class="stagerow"><img class="bigic ${hid&&open?'btn':''}" ${hid&&open?'data-act="reveal"':''} src="${hid?ic(0):ic(done+1)}" alt=""><div class="txt">${txt}</div></div></div>`;
+  }
+  app.innerHTML=banner()+`<div class="top"><div><h1>${esc(t.name)}</h1><div class="small">${EVENT_TITLE}</div></div>
+    <div style="text-align:right">${statusPill()}
+    <div class="small">fractal time so far</div>
+    <div class="timer" style="font-size:34px" data-t="total:${tid}">${fmt(totalFor(tid))}</div></div></div>`
+    +stage+tileGrid(tid)
+    +'<div class="small">Only time spent between Start and End counts. Pressed the wrong button? You get a few seconds to undo; after that ask the organiser.</div>'
+    +(toast?`<div class="toast"><span>${esc(toast.msg)}</span><button data-act="toast-undo">Undo</button></div>`:'');
+}
+
+function renderAdmin(){
+  const akey=P.get('key');
+  if(!S.adminKey){
+    app.innerHTML=banner()+`<div class="top"><h1>${EVENT_TITLE} – Organiser</h1></div><div class="panel">
+      <p>No event exists yet. Creating one gives you a private organiser link. Bookmark it.</p>
+      <button class="pri" data-act="create">Create event</button></div>`;
+    return;
+  }
+  if(akey!==S.adminKey){ app.innerHTML=banner()+'<div class="panel err">Wrong or missing organiser key.</div>'+(DB.demo?'<div class="panel"><p class="small" style="margin-bottom:10px">Demo mode only: if you lost the organiser link, you can wipe the test event and start over.</p><button class="dng" data-act="demoreset">Wipe demo data and start over</button></div>':'<div class="panel small">Lost the key? In the Firebase console open Realtime Database, then event, and read the adminKey value. Add it to the link as &amp;key=…</div>'); return; }
+  const teams=teamList(); const n=teams.length||3;
+  const status=S.status||'setup';
+  const links=teams.map(t=>`<div class="linkrow"><b style="width:120px;color:${t.color}">${esc(t.name)}</b>
+    <input readonly value="${base()}?view=team&team=${t.id}&key=${t.key}"><button data-act="copy" data-v="${base()}?view=team&team=${t.id}&key=${t.key}">Copy</button></div>`).join('');
+  const specLink=base()+'?view=spectator';
+  app.innerHTML=banner()+`<div class="top"><h1>${EVENT_TITLE} – Organiser</h1><div class="row">${statusPill()}</div></div>
+    <div class="panel"><h3>Event control</h3><div class="row" style="margin-top:10px">
+      <button class="pri" data-act="start" ${status==='running'||!teams.length?'disabled':''}>${status==='stopped'?'Resume':'Open the event'}</button>
+      <button data-act="stop" ${status==='running'?'':'disabled'}>Lock (pause everyone)</button>
+      <button class="dng" data-act="resetrace">Reset all progress</button></div>
+      <div class="small" style="margin-top:6px">Open = teams can press their buttons. Each team times itself: only the time between Start and End counts. Lock freezes running timers; Resume gives that time back. Reset wipes all progress, keeps teams.</div></div>
+    <div class="panel"><h3>Teams</h3>
+      <div class="row" style="margin:10px 0">Number of teams
+        <select id="nt">${[2,3,4,5].map(k=>`<option ${k===n?'selected':''}>${k}</option>`).join('')}</select>
+        <button data-act="redraw">Set</button>
+        <button data-act="importdraft">Import names from team draft</button></div>
+      <div id="names" class="row">${Array.from({length:n},(_,i)=>`<input data-name="t${i+1}" placeholder="Team ${i+1}" value="${esc((S.teams&&S.teams['t'+(i+1)]||{}).name||'')}">`).join('')}</div>
+      <div class="row" style="margin-top:10px"><button class="pri" data-act="saveteams">Save teams</button>
+        <span class="small">Existing keys are kept when you rename. Changing the team count deletes removed teams' clears.</span></div></div>
+    <div class="panel"><h3>Links</h3>
+      <div class="small" style="margin:6px 0">Give each team only its own link. Spectator link is read-only: keep it out of the team channels if you want timers hidden.</div>
+      ${links||'<div class="small">Save teams first.</div>'}
+      <div class="linkrow"><b style="width:120px">Spectators</b><input readonly value="${specLink}"><button data-act="copy" data-v="${specLink}">Copy</button></div></div>
+    <div class="top"><h3>Live board</h3>${modeToggle()}</div>`+teamCards(true);
+}
+
+function render(){
+  if(VIEW==='admin'){
+    const a=document.activeElement;
+    if(a&&app.contains(a)&&(a.tagName==='INPUT'||a.tagName==='SELECT')) return;
+    renderAdmin();
+  } else if(VIEW==='team') renderTeam(); else renderSpectator();
+  tick();
+}
+function tick(){
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const [k,tid]=el.dataset.t.split(':');
+    el.textContent=fmt(k==='total'?totalFor(tid):splitFor(tid));
+  });
+}
+
+/* ---------------- actions ---------------- */
+app.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  const a=el.dataset.act;
+  if(a==='mode'){ stripMode=el.dataset.m; render(); }
+  else if(a==='reveal'||a==='startf'||a==='endf'){
+    if(S.status!=='running') return;
+    const tid=P.get('team'); const idx=doneOf(tid); if(idx>=N) return;
+    const ph=phaseOf(tid);
+    const field=a==='reveal'?'r':a==='startf'?'s':'e';
+    if((a==='reveal'&&ph!=='hidden')||(a==='startf'&&ph!=='revealed')||(a==='endf'&&ph!=='running')) return;
+    DB.set(`seg/${tid}/${idx}/${field}`,DB.now());
+    clearTimeout(toastTimer);
+    const label={r:'Instability revealed',s:'Fractal started',e:'Fractal ended: '+FRACTALS[idx][0]}[field];
+    toast={msg:label,tid,idx,field}; render();
+    toastTimer=setTimeout(()=>{toast=null;render();},UNDO_WINDOW_MS);
+  }
+  else if(a==='toast-undo'&&toast){
+    const {tid,idx,field}=toast; const lf=latestField(tid);
+    if(lf&&lf.idx===idx&&lf.field===field) DB.remove(`seg/${tid}/${idx}/${field}`);
+    toast=null; clearTimeout(toastTimer); render();
+  }
+  else if(a==='demoreset'){ if(confirm('Wipe ALL demo data (teams, progress, organiser key)?')){ DB.reset(); location.search='?view=admin'; } }
+  else if(a==='create'){ const k=rnd()+rnd(); DB.set('adminKey',k).then(()=>{ location.search='?view=admin&key='+k; }); }
+  else if(a==='start'){
+    // resuming from a lock: give the locked time back to any running segment
+    if(S.status==='stopped'&&S.stoppedAt){
+      const delta=DB.now()-S.stoppedAt;
+      teamList().forEach(t=>{ const c=curSeg(t.id); if(c.s!=null&&c.e==null) DB.set(`seg/${t.id}/${doneOf(t.id)}/s`,c.s+delta); });
+    }
+    DB.set('status','running'); DB.remove('stoppedAt');
+  }
+  else if(a==='stop'){ DB.set('stoppedAt',DB.now()); DB.set('status','stopped'); }
+  else if(a==='resetrace'){ if(confirm('Wipe ALL progress for every team?')){ DB.remove('seg'); DB.remove('stoppedAt'); DB.set('status','setup'); } }
+  else if(a==='undo'){ const tid=el.dataset.tid; const lf=latestField(tid); if(lf) DB.remove(`seg/${tid}/${lf.idx}/${lf.field}`); }
+  else if(a==='copy'){ navigator.clipboard&&navigator.clipboard.writeText(el.dataset.v); el.textContent='Copied'; setTimeout(()=>el.textContent='Copy',1200); }
+  else if(a==='redraw'){
+    const n=parseInt(document.getElementById('nt').value,10);
+    document.getElementById('names').innerHTML=Array.from({length:n},(_,i)=>`<input data-name="t${i+1}" placeholder="Team ${i+1}" value="${esc((S.teams&&S.teams['t'+(i+1)]||{}).name||'')}">`).join('');
+  }
+  else if(a==='importdraft'){
+    let d=null; try{ d=JSON.parse(localStorage.getItem('fractal-draft-result')||'null'); }catch(e){}
+    if(!d||!d.length){ alert('No saved draft found. Run the team draft first (it must be hosted on the same site as this page).'); return; }
+    const n=Math.min(5,Math.max(2,d.length));
+    document.getElementById('nt').value=n;
+    document.getElementById('names').innerHTML=Array.from({length:n},(_,i)=>`<input data-name="t${i+1}" placeholder="Team ${i+1}" value="${esc((d[i]||{}).name||'')}">`).join('');
+  }
+  else if(a==='saveteams'){
+    const inputs=[...document.querySelectorAll('[data-name]')];
+    const teams={};
+    inputs.forEach((inp,i)=>{
+      const id=inp.dataset.name; const old=(S.teams||{})[id]||{};
+      teams[id]={name:inp.value.trim()||('Team '+(i+1)), key:old.key||rnd()+rnd()};
+    });
+    const removed=Object.keys(S.teams||{}).filter(id=>!teams[id]);
+    DB.set('teams',teams);
+    removed.forEach(id=>DB.remove('seg/'+id));
+    document.activeElement&&document.activeElement.blur();
+  }
+});
+
+/* ---------------- boot ---------------- */
+(async function(){
+  try{
+    DB = FIREBASE_CONFIG ? await makeFirebase(FIREBASE_CONFIG) : makeDemo();
+  }catch(err){
+    app.innerHTML='<div class="panel err">Could not connect to Firebase: '+esc(err.message||err)+'</div>'; return;
+  }
+  DB.onState(s=>{ S=s||{}; render(); });
+  setInterval(tick,250);
+  window.__DB=DB; window.__state=()=>S;
+})();
+</script>
+</body>
+</html>

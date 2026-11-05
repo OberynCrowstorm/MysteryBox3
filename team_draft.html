@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Envoys of the Lost — Fractal Rush Team Draft</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Exo+2:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0a;--panel:#131313;--raised:#191817;--line:#262422;--gold:#c9a84c;--gold-dim:#8a7239;--ink:#e8e4dc;--muted:#7a756c;--warn:#e5484d}
+body{background:var(--bg);color:var(--ink);font-family:'Exo 2',sans-serif;line-height:1.5;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+.eyebrow{font-family:'Cinzel',serif;font-size:.8rem;font-weight:600;letter-spacing:.35em;color:var(--gold-dim)}
+h1{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(2rem,5vw,3.2rem);color:var(--gold);text-shadow:0 0 34px rgba(201,168,76,.3);line-height:1.1;margin:.4rem 0 1.5rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1.2rem;margin-bottom:1.2rem}
+label{display:block;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+textarea,input,select{width:100%;background:#0d0d0d;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:.6rem .8rem;font:inherit;font-size:.95rem}
+textarea{min-height:230px;resize:vertical}
+.row{display:flex;gap:1rem;flex-wrap:wrap;align-items:end}
+.row>div{flex:1;min-width:160px}
+.btn{font-family:'Cinzel',serif;font-weight:700;letter-spacing:.1em;cursor:pointer;border-radius:6px;padding:.75rem 1.4rem;border:1px solid var(--gold);background:var(--gold);color:#17130a;font-size:.95rem}
+.btn:hover{filter:brightness(1.1)}
+.btn.sec{background:transparent;color:var(--gold)}
+.btn:disabled{opacity:.4;cursor:default}
+details{margin-top:.8rem}
+summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+details textarea{min-height:90px;margin-top:.5rem}
+.count{font-size:.85rem;color:var(--muted);margin-top:.4rem}
+#stage{display:none}
+#stage.on{display:block}
+.line{font-family:'Cinzel',serif;font-size:clamp(1.2rem,3vw,1.9rem);color:var(--gold);text-align:center;min-height:3rem;margin:1.5rem 0;letter-spacing:.06em}
+.teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem}
+.team{background:var(--raised);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:8px;padding:1rem 1.1rem;opacity:0;transform:translateY(10px);transition:all .6s}
+.team.show{opacity:1;transform:none}
+.team h3{font-family:'Cinzel',serif;color:var(--gold);font-size:1.15rem;margin-bottom:.6rem}
+.team li{list-style:none;padding:.25rem 0;border-bottom:1px solid var(--line);opacity:0;transition:opacity .5s}
+.team li.show{opacity:1}
+.team li:last-child{border:0}
+.actions{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.4rem;justify-content:center}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--raised);border:1px solid var(--gold);padding:.6rem 1.2rem;border-radius:8px;display:none}
+.saved{font-size:.8rem;color:var(--muted);text-align:center;margin-top:.6rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">ENVOYS OF THE LOST</div>
+  <h1>Fractal Rush — Team Draft</h1>
+
+  <div id="setup">
+    <div class="panel">
+      <label for="roster">Players (one per line)</label>
+      <textarea id="roster" spellcheck="false" placeholder="Type or paste the names here, one per line"></textarea>
+      <div class="count" id="count"></div>
+      <div class="row" style="margin-top:1rem">
+        <div style="max-width:200px"><label for="nteams">Teams</label>
+          <select id="nteams"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+        <div><button class="btn" id="go">DRAW THE TEAMS</button></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="stage">
+    <div class="line" id="line"></div>
+    <div class="teams" id="teams"></div>
+    <div class="actions">
+      <button class="btn sec" id="redo">Re-draw</button>
+      <button class="btn sec" id="copy">Copy for Discord</button>
+      <button class="btn sec" id="back">Back to setup</button>
+    </div>
+    <div class="saved" id="saved"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- defaults ---------- */
+const HIDDEN_TOGETHER = ['Caspian, Fox'];
+const HIDDEN_APART = ['Bot, Klepto','Jackie, Solanko'];
+const HIDDEN_LIGHT = ['Bot','Jackie'];
+const TEAM_NAME_POOL = ["Faren's Harem","Jenna's Feet","Karka Parkour","Palawa Ingacious Joko, praised be","Tybalt's Apples","Treasure Mushroom","Rama's Ramen"];
+const KEY='fractal-draft-result';
+
+const $=id=>document.getElementById(id);
+const lines=t=>t.split('\n').map(s=>s.trim()).filter(Boolean);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
+
+function updCount(){
+  const n=lines($('roster').value).length;
+  const ok=[2,3,4,5].filter(x=>n>=4*x&&n<=5*x);
+  $('count').textContent=n+' players'+(n?(ok.length?' - fits '+ok.join(' or ')+' teams':' - no valid team count (need 4-5 per team)'):'');
+  if(ok.length&&!ok.includes(parseInt($('nteams').value,10))) $('nteams').value=ok[0];
+}
+$('roster').addEventListener('input',updCount); updCount();
+
+/* ---------- matching ---------- */
+function resolve(query,players){
+  const q=query.toLowerCase().trim(); if(!q) return -1;
+  const exact=players.findIndex(p=>p.toLowerCase()===q); if(exact>=0) return exact;
+  const hits=[]; players.forEach((p,i)=>{ if(p.toLowerCase().includes(q)) hits.push(i); });
+  if(hits.length===1) return hits[0];
+  if(hits.length>1){
+    const tok=hits.filter(i=>players[i].toLowerCase().split(/[^a-z0-9]+/).includes(q));
+    if(tok.length===1) return tok[0];
+  }
+  console.warn('Could not resolve uniquely:',query,hits.map(i=>players[i])); return -1;
+}
+
+/* ---------- the draw ---------- */
+function draw(players,k,together,apart,light){
+  const n=players.length;
+  // union-find for "together"
+  const par=players.map((_,i)=>i); const find=x=>par[x]===x?x:(par[x]=find(par[x]));
+  together.forEach(g=>{const ids=g.split(',').map(s=>resolve(s,players)).filter(i=>i>=0); for(let i=1;i<ids.length;i++) par[find(ids[i])]=find(ids[0]);});
+  const groups={}; players.forEach((_,i)=>{(groups[find(i)]=groups[find(i)]||[]).push(i);});
+  const units=Object.values(groups);
+  const conflicts=[]; // pairs of player indexes that must differ
+  apart.forEach(g=>{const ids=g.split(',').map(s=>resolve(s,players)).filter(i=>i>=0);
+    for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++)conflicts.push([ids[a],ids[b]]);});
+  const base=Math.floor(n/k), extra=n%k;
+  const lightIds=(light||[]).map(q=>resolve(q,players)).filter(i=>i>=0);
+  let best=null, bestPen=Infinity;
+  for(let attempt=0;attempt<6000;attempt++){
+    const sizes=shuffle(Array.from({length:k},(_,i)=>base+(i<extra?1:0)));
+    const teams=Array.from({length:k},()=>[]);
+    const order=shuffle(units).sort((a,b)=>b.length-a.length);
+    let ok=true;
+    for(const u of order){
+      const opts=shuffle([...teams.keys()]).filter(t=>{
+        if(teams[t].length+u.length>sizes[t]) return false;
+        return !conflicts.some(([x,y])=>(u.includes(x)&&teams[t].includes(y))||(u.includes(y)&&teams[t].includes(x)));
+      });
+      if(!opts.length){ok=false;break;}
+      teams[opts[0]].push(...u);
+    }
+    if(!(ok&&teams.every((t,i)=>t.length===sizes[i]))) continue;
+    // penalty: flagged players sitting in a bigger-than-minimum team when sizes are uneven
+    const mn=Math.min(...sizes);
+    const pen=extra? new Set(lightIds.map(i=>teams.findIndex(t=>t.includes(i)))).size && [...new Set(lightIds.map(i=>teams.findIndex(t=>t.includes(i))))].filter(t=>teams[t].length>mn).length : 0;
+    if(pen<bestPen){ bestPen=pen; best=teams; if(pen===0) break; }
+  }
+  if(best){
+    const teams=best, where=i=>teams.findIndex(t=>t.includes(i));
+    conflicts.forEach(([x,y])=>{if(where(x)===where(y))console.error('CONFLICT',players[x],players[y]);});
+    if(bestPen>0) console.warn('Could not keep all flagged players on the smaller teams');
+    return teams.map(t=>shuffle(t).map(i=>players[i]));
+  }
+  return null;
+}
+
+/* ---------- display ---------- */
+let current=null, running=false;
+function clean(p){ return p.replace(/\s*\([^)]*\)\s*/g,'').trim(); }
+function renderTeams(result,animate){
+  const box=$('teams'); box.innerHTML='';
+  result.forEach(t=>{
+    const d=document.createElement('div'); d.className='team';
+    d.innerHTML='<h3>'+esc(t.name)+'</h3><ul>'+t.members.map(m=>'<li>'+esc(clean(m))+'</li>').join('')+'</ul>';
+    box.appendChild(d);
+  });
+  if(!animate){ box.querySelectorAll('.team,.team li').forEach(e=>e.classList.add('show')); }
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function ceremony(result){
+  running=true; $('line').textContent='';
+  $('redo').disabled=true;$('copy').disabled=true;$('back').disabled=true;
+  const msgs=['The guild bank has been consulted…','Fractal fates are being decided…','Teams are forming…'];
+  for(const m of msgs){ $('line').textContent=m; await sleep(1800); }
+  renderTeams(result,true);
+  const cards=[...document.querySelectorAll('.team')];
+  for(let i=0;i<cards.length;i++){
+    $('line').textContent='Team '+(i+1)+' of '+cards.length;
+    cards[i].classList.add('show'); await sleep(900);
+    const lis=[...cards[i].querySelectorAll('li')];
+    for(const li of lis){ li.classList.add('show'); await sleep(650); }
+    await sleep(500);
+  }
+  $('line').textContent='Good luck. You will need it.';
+  $('redo').disabled=false;$('copy').disabled=false;$('back').disabled=false;
+  running=false;
+}
+function go(){
+  const players=lines($('roster').value);
+  const k=parseInt($('nteams').value,10);
+  const n=players.length;
+  if(n<4*k||n>5*k){
+    const ok=[2,3,4,5].filter(x=>n>=4*x&&n<=5*x);
+    toast('Teams must be 4-5 players: '+n+' players fit '+(ok.length?ok.join(' or ')+' teams':'no team count (2-5)'));return;
+  }
+  const teams=draw(players,k,HIDDEN_TOGETHER,HIDDEN_APART,HIDDEN_LIGHT);
+  if(!teams){toast('No valid split exists with those rules');return;}
+  const names=shuffle(TEAM_NAME_POOL);
+  const result=teams.map((m,i)=>({name:names[i]||('Team '+(i+1)),members:m}));
+  current=result;
+  try{localStorage.setItem(KEY,JSON.stringify(result));}catch(e){}
+  $('setup').style.display='none'; $('stage').classList.add('on');
+  $('saved').textContent='Result saved in this browser. If you close the tab it will reload.';
+  ceremony(result);
+}
+$('go').onclick=go;
+$('redo').onclick=()=>{ if(!running && confirm('Throw this result away and draw again?')) go(); };
+$('back').onclick=()=>{ $('stage').classList.remove('on'); $('setup').style.display='block'; };
+$('copy').onclick=()=>{
+  if(!current)return;
+  const txt=current.map(t=>'**'+t.name+'**\n'+t.members.map(m=>'- '+clean(m)).join('\n')).join('\n\n');
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied'));
+};
+/* restore after a closed tab */
+try{
+  const saved=JSON.parse(localStorage.getItem(KEY)||'null');
+  if(saved&&saved.length){
+    current=saved; $('setup').style.display='none'; $('stage').classList.add('on');
+    renderTeams(saved,false); $('line').textContent='Restored from the last draw.';
+    $('saved').textContent='Result saved in this browser.';
+  }
+}catch(e){}
+</script>
+</body>
+</html>
