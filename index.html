@@ -11,6 +11,7 @@
   --bg:#0c0f14; --panel:#141922; --line:#262e3b; --txt:#e6e2d6; --dim:#8b92a0;
   --gold:#c9a84c; --blue:#17607f; --blue-d:#062b3a; --orange:#e8732f; --red:#c0504a;
 }
+.zg{display:inline-block;line-height:2.4;padding:.5em 0}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:'Exo 2',system-ui,sans-serif;min-height:100vh}
 h1,h2,h3{font-family:'Cinzel',serif;margin:0;letter-spacing:.04em}
@@ -130,35 +131,38 @@ const UNDO_WINDOW_MS = 5000;
 
 // Official in-game order 1–25: [fractal, challenge]
 const FRACTALS = [
-  ['Volcanic','Ignore the grawl shamans'],
-  ['Uncategorised','Kill all harpies'],
-  ['Snowblind','If we only had marshmallows...'],
-  ['Urban Battleground','Do the skip'],
-  ['Swampland',"Visit Mossman's Hut"],
-  ['Cliffside','Pay your respects'],
-  ['Aquatic Ruins','*Everyone plays the same class.* If you can\'t, you sit back but you need to read a book for them or sing for them'],
-  ['Underground Facility','The person doing the kegs turns off their screen; another person guides them on voice'],
-  ['Molten Furnace','If a player gets hit by flames, they have to gg'],
-  ['Molten Boss','No skips allowed. *MURDERRRRR*'],
-  ['Deepstone','Split between the rooms. Only ranged attacks allowed'],
-  ["Siren's Reef",'Only one person can carry gold'],
-  ['Chaos','Reprieve - no challenge!'],
-  ['Aetherblade','Everyone puts on Caramelldansen and clears the boss within the song\'s length','https://www.youtube.com/watch?v=PDJLvF1dUek'],
-  ['Thaumanova Reactor','Pass it on in the reactor, old-style. *SAK is not allowed. Skills are disabled due to magical fluctuations - only autos allowed.*'],
-  ['Twilight Oasis','PRAISE JOKO (only core or PoF specs allowed)'],
-  ['Kinfall','Do it like a du- meerkat. People opening the door need to jump off a cliff immediately and stay dead until the boss'],
-  ['Mai Trin','One person needs to stand still'],
-  ['Solitary Throne','One person jumps, the rest use portals. *Mesmers are banned*'],
-  ['Solid Ocean','One tentacle needs to always stay alive. If you get downed, you can't get up.'],
-  ['Silent Surf','*DO NOT* kill the phantoms. If you fail JP, you're timed out until the boss'],
-  ['Nightmare','Kill Fleshgorge'],
-  ['Shattered Observatory','Ignore the Corporeal Reassignment until only 3 people are alive. Res is not allowed'],
+  ['Volcanic','*Blood For the Blood God*\nIgnore the grawl shamans - casualties are expected.'],
+  ['Uncategorised','*Harpicide*\nKill all harpies'],
+  ['Snowblind','*Yum?*\nIf we only had marshmallows...'],
+  ['Urban Battleground','*Hop-Skip-Jump*\nDo the skip - no running'],
+  ['Swampland',"*Cottagecore*\nVisit Mossman's Hut"],
+  ['Cliffside','*Hot Potato*\nDrop the hammer every time you use it'],
+  ['Aquatic Ruins','*Army of Me*\nEveryone plays the same class.\nIf you can\'t, you sit back but you need to read a book for them or sing for them'],
+  ['Underground Facility','*Goose Chase*\nThe person doing the kegs turns off their screen; another person guides them on voice'],
+  ['Molten Furnace','*The Floor Is Lava*\nIf a player gets hit by the flames, they have to gg'],
+  ['Molten Boss','*MURDERRRR*\nKill everything. No skips allowed.'],
+  ['Deepstone','*Social Distancing*\nSplit between the rooms. Only ranged attacks allowed'],
+  ["Siren's Reef",'*My Precious*\nOnly two people can carry the treasure'],
+  ['Chaos','*Not What You Expected*\nComplete The Collapsed Observatory, Spekk's Laboratory, Shattered Ice Ruins and Grendich Gamble'],
+  ['Aetherblade','*Skrittastic*\nEveryone puts on Caramelldansen and clears the boss within the song\'s length','https://www.youtube.com/watch?v=PDJLvF1dUek'],
+  ['Thaumanova Reactor','*As ANet Intended*\nPass it on in the reactor, old-style. *SAK is not allowed. Skills are disabled due to magical fluctuations - only autos allowed.*'],
+  ['Twilight Oasis','*PRAISE JOKO*\nOnly core or PoF specs allowed'],
+  ['Kinfall','*Meerkat mode*\nPeople opening the door need to jump off a cliff immediately and stay dead until the boss'],
+  ['Mai Trin','*Hands aff, taps aff*\nOne person needs to stand still and survive. Hands off the keyboard.'],
+  ['Solitary Throne','*Issy Hates Purple*\nOne person jumps, the rest use portals. *Mesmers are banned*'],
+  ['Solid Ocean','*Hentai Slam*\nOne tentacle needs to always stay alive. If you get downed, you can't get up.'],
+  ['Silent Surf','*Cock-a-doodle-doo*\n*DO NOT* kill the phantoms. If you fail JP, you're timed out until the boss'],
+  ['Nightmare','K͉͔͎͌͆̈́͑̌ĭ͖̘̈́̓̉l͕̜̈́͛͗͛̊͗l̗͍̲͉̂̌̏ F̖̝͍͊̎̒͘l̫͔̰͂͌̅̐͡ē̞̰̻͐̆ś̪̙̀͞h̩̯̳̝̀́͂̄͐͡g̞̖̽̀͂̇̈o͈͙̩͉͔͆̋r̼͇̈͂͛̀g̪̦̀̑͑̓e͉̭͒͛͐̆̂̉'],
+  ['Shattered Observatory','*I Can Fix Her/Him*\nIgnore the Corporeal Reassignment until only 2 people are alive. Res is not allowed'],
   ['Sunqua Peak','Reprieve - no challenge!'],
-  ['Lonely Tower','Kite Deimos and give all the Skittles to Eparch']
+  ['Lonely Tower','*Sugar Rush*\nKite Deimos and give all the Skittles to Eparch']
 ];
 const N = FRACTALS.length;
 const ic = n => 'icons/'+String(n).padStart(2,'0')+'.png';   // 00 = hidden/reveal, 01-25 = fractals in order
-const chal = t => esc(t).replace(/\*(.+?)\*/g,'<b class="em">$1</b>');
+const chal = t => {
+  const h = esc(t).replace(/\*(.+?)\*/g,'<b class="em">$1</b>').replace(/\n/g,'<br>');
+  return /[\u0300-\u036f]/.test(t) ? '<span class="zg">'+h+'</span>' : h;
+};
 const TEAM_COLORS = ['#e8732f','#3aa0d8','#7bc96f','#c9a84c','#b46bd6'];
 const ROMAN = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV'];
 
